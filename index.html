@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Address Autocomplete</title>
+  <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&libraries=places"></script>
+  <style>
+    body {
+      font-family: Arial;
+      margin: 0;
+      padding: 8px;
+    }
+    input {
+      width: 95%;
+      padding: 10px;
+      font-size: 16px;
+    }
+    button {
+      margin-top: 10px;
+      padding: 6px 10px;
+    }
+  </style>
+</head>
+<body>
+  <input id="autocomplete" placeholder="Start typing your address" type="text" />
+  <button onclick="clearAddress()">Clear Address</button>
+
+  <script>
+    let autocomplete;
+
+    function initAutocomplete() {
+      autocomplete = new google.maps.places.Autocomplete(
+        document.getElementById("autocomplete"),
+        { types: ["address"], componentRestrictions: { country: "us" } }
+      );
+
+      autocomplete.addListener("place_changed", () => {
+        const place = autocomplete.getPlace();
+        const address = {
+          street: "",
+          city: "",
+          state: "",
+          zip: ""
+        };
+
+        place.address_components.forEach(component => {
+          const types = component.types;
+          if (types.includes("street_number")) {
+            address.street = component.long_name + " " + address.street;
+          }
+          if (types.includes("route")) {
+            address.street += component.long_name;
+          }
+          if (types.includes("locality")) {
+            address.city = component.long_name;
+          }
+          if (types.includes("administrative_area_level_1")) {
+            address.state = component.short_name;
+          }
+          if (types.includes("postal_code")) {
+            address.zip = component.long_name;
+          }
+        });
+
+        // Send to Wix page
+        window.parent.postMessage(
+          {
+            type: "address-selected",
+            data: address
+          },
+          "*"
+        );
+      });
+    }
+
+    function clearAddress() {
+      document.getElementById("autocomplete").value = "";
+      window.parent.postMessage({ type: "address-cleared" }, "*");
+    }
+
+    window.onload = initAutocomplete;
+  </script>
+</body>
+</html>
