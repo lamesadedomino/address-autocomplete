@@ -1,74 +1,70 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>Address Autocomplete</title>
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDbKoURqZXXsdLIUkF7lZdxYTd1jAaKWB0&libraries=places"></script>
+    <title>Google Places Autocomplete</title>
+    <script async defer
+      src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&libraries=places">
+    </script>
     <style>
       body {
-        font-family: Arial;
-        padding: 20px;
+        font-family: sans-serif;
+        padding: 0;
+        margin: 0;
       }
-      input {
-        width: 100%;
+      #autocomplete {
+        width: 90%;
+        margin: 10px auto;
         padding: 10px;
         font-size: 16px;
-        margin-bottom: 10px;
+      }
+      button {
+        display: block;
+        margin: 10px auto;
+        padding: 6px 12px;
+        font-size: 14px;
+        cursor: pointer;
       }
     </style>
   </head>
   <body>
-    <h2>Enter Address:</h2>
-    <input id="autocomplete" type="text" placeholder="Start typing your address" />
+    <input id="autocomplete" placeholder="Start typing your address" type="text" />
+    <button onclick="clearAddress()">Clear</button>
 
     <script>
       let autocomplete;
-
       function initAutocomplete() {
         autocomplete = new google.maps.places.Autocomplete(
-          document.getElementById('autocomplete'),
-          { types: ['address'], componentRestrictions: { country: 'us' } }
+          document.getElementById("autocomplete"),
+          { types: ["address"] }
         );
+        autocomplete.addListener("place_changed", () => {
+          const place = autocomplete.getPlace();
+          const components = {
+            street_number: "",
+            route: "",
+            locality: "",
+            administrative_area_level_1: "",
+            postal_code: ""
+          };
+          for (const comp of place.address_components) {
+            const type = comp.types[0];
+            if (components[type] !== undefined) {
+              components[type] = comp.long_name;
+            }
+          }
+          const street = `${components.street_number} ${components.route}`.trim();
+          const city = components.locality;
+          const state = components.administrative_area_level_1;
+          const zip = components.postal_code;
 
-        autocomplete.setFields(['address_component']);
-        autocomplete.addListener('place_changed', fillInAddress);
+          // Send data to Wix
+          window.parent.postMessage({ street, city, state, zip }, "*");
+        });
       }
 
-      function fillInAddress() {
-        const place = autocomplete.getPlace();
-        const address = {
-          street: '',
-          city: '',
-          state: '',
-          zip: '',
-          country: ''
-        };
-
-        place.address_components.forEach(component => {
-          const types = component.types;
-
-          if (types.includes('street_number')) {
-            address.street = component.long_name + ' ' + address.street;
-          }
-          if (types.includes('route')) {
-            address.street += component.long_name;
-          }
-          if (types.includes('locality')) {
-            address.city = component.long_name;
-          }
-          if (types.includes('administrative_area_level_1')) {
-            address.state = component.short_name;
-          }
-          if (types.includes('postal_code')) {
-            address.zip = component.long_name;
-          }
-          if (types.includes('country')) {
-            address.country = component.long_name;
-          }
-        });
-
-        // Send to Wix
-        window.parent.postMessage(address, '*');
-        console.log("📬 Address sent via postMessage:", address);
+      function clearAddress() {
+        document.getElementById("autocomplete").value = "";
+        window.parent.postMessage({ street: "", city: "", state: "", zip: "" }, "*");
       }
 
       window.onload = initAutocomplete;
